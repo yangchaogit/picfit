@@ -21,9 +21,83 @@ import (
 )
 
 type GoImageEngine struct {
-	DefaultFormat  string
-	Format         string
-	DefaultQuality int
+	DefaultFormat   string
+	Format          string
+	DefaultQuality  int
+	PalettedChannel chan *PalettedJob
+}
+
+type Worker struct {
+	PalettedChannel chan *PalettedJob
+	quit            chan bool
+	Engine          *GoImageEngine
+}
+
+func (w *Worker) Start() {
+	go func(w Worker) {
+		for {
+			select {
+			case job := <-w.PalettedChannel:
+				if len(job.Paletted) == 1 {
+					paletted := job.Paletted[0]
+					img := w.Engine.Scale(paletted, job.Width, job.Height, job.Options.Upscale, job.Trans)
+
+					bounds := img.Bounds()
+
+					job.ResultChannel <- &Result{
+						Image:    img,
+						Position: job.Position,
+						Paletted: image.NewPaletted(image.Rect(0, 0, bounds.Max.X, bounds.Max.Y), paletted.Palette),
+					}
+				} else {
+					for i := range job.Paletted {
+						w.PalettedChannel <- &PalettedJob{
+							Paletted:      []*image.Paletted{job.Paletted[i]},
+							Width:         job.Width,
+							Height:        job.Height,
+							Position:      i,
+							Trans:         job.Trans,
+							Options:       job.Options,
+							ResultChannel: job.ResultChannel,
+						}
+					}
+
+				}
+			case <-w.quit:
+				return
+			}
+		}
+	}(*w)
+}
+
+// Stop signals the worker to stop listening for work requests.
+func (w Worker) Stop() {
+	go func() {
+		w.quit <- true
+	}()
+}
+
+func NewGoImageEngine(defaultFormat string, format string, quality int, maxWorkers int) *GoImageEngine {
+	jobs := make(chan *PalettedJob)
+	quit := make(chan bool)
+
+	engine := &GoImageEngine{
+		DefaultFormat:   defaultFormat,
+		Format:          format,
+		DefaultQuality:  quality,
+		PalettedChannel: jobs,
+	}
+
+	for i := 0; i < maxWorkers; i++ {
+		worker := &Worker{
+			PalettedChannel: jobs,
+			quit:            quit,
+			Engine:          engine,
+		}
+		go worker.Start()
+	}
+
+	return engine
 }
 
 type ImageTransformation func(img image.Image) *image.NRGBA
@@ -43,6 +117,16 @@ type Result struct {
 	Image    image.Image
 	Position int
 	Paletted *image.Paletted
+}
+
+type PalettedJob struct {
+	Paletted      []*image.Paletted
+	Width         int
+	Height        int
+	Position      int
+	Trans         Transformation
+	Options       *Options
+	ResultChannel chan *Result
 }
 
 type Transformation func(img image.Image, width int, height int, filter imaging.ResampleFilter) *image.NRGBA
@@ -92,22 +176,19 @@ func (e *GoImageEngine) TransformGIF(img *imagefile.ImageFile, width int, height
 
 	length := len(g.Image)
 	done := make(chan *Result)
+
+	e.PalettedChannel <- &PalettedJob{
+		Paletted:      g.Image,
+		Width:         width,
+		Height:        height,
+		Position:      -1,
+		Trans:         trans,
+		Options:       options,
+		ResultChannel: done,
+	}
+
 	images := make([]*image.Paletted, length)
 	processed := 0
-
-	for i := range g.Image {
-		go func(paletted *image.Paletted, width int, height int, position int, trans Transformation, options *Options) {
-			img := e.Scale(paletted, width, height, options.Upscale, trans)
-
-			bounds := img.Bounds()
-
-			done <- &Result{
-				Image:    img,
-				Position: position,
-				Paletted: image.NewPaletted(image.Rect(0, 0, bounds.Max.X, bounds.Max.Y), paletted.Palette),
-			}
-		}(g.Image[i], width, height, i, trans, options)
-	}
 
 	for {
 		select {
@@ -119,7 +200,7 @@ func (e *GoImageEngine) TransformGIF(img *imagefile.ImageFile, width int, height
 			images[result.Position] = result.Paletted
 
 			processed++
-		case <-time.After(time.Second * 5):
+		case <-time.After(time.Second * 10):
 			break
 		}
 

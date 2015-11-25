@@ -8,6 +8,7 @@ import (
 	"github.com/thoas/picfit/dummy"
 	"github.com/thoas/picfit/engines"
 	"github.com/thoas/picfit/util"
+	"runtime"
 )
 
 type Initializer func(jq *jsonq.JsonQuery, app *Application) error
@@ -81,11 +82,7 @@ var BasicInitializer Initializer = func(jq *jsonq.JsonQuery, app *Application) e
 	}
 
 	app.SecretKey, _ = jq.String("secret_key")
-	app.Engine = &engines.GoImageEngine{
-		DefaultFormat:  DefaultFormat,
-		Format:         format,
-		DefaultQuality: quality,
-	}
+	app.Engine = engines.NewGoImageEngine(DefaultFormat, format, quality, runtime.NumCPU())
 
 	enableUpload, err := jq.Bool("options", "enable_upload")
 
