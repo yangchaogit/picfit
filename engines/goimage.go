@@ -25,6 +25,7 @@ type GoImageEngine struct {
 	Format          string
 	DefaultQuality  int
 	PalettedChannel chan *PalettedJob
+	Workers         []*Worker
 }
 
 type Worker struct {
@@ -38,31 +39,16 @@ func (w *Worker) Start() {
 		for {
 			select {
 			case job := <-w.PalettedChannel:
-				if len(job.Paletted) == 1 {
-					paletted := job.Paletted[0]
-					img := w.Engine.Scale(paletted, job.Width, job.Height, job.Options.Upscale, job.Trans)
+				img := w.Engine.Scale(job.Paletted, job.Width, job.Height, job.Options.Upscale, job.Trans)
 
-					bounds := img.Bounds()
+				bounds := img.Bounds()
 
-					job.ResultChannel <- &Result{
-						Image:    img,
-						Position: job.Position,
-						Paletted: image.NewPaletted(image.Rect(0, 0, bounds.Max.X, bounds.Max.Y), paletted.Palette),
-					}
-				} else {
-					for i := range job.Paletted {
-						w.PalettedChannel <- &PalettedJob{
-							Paletted:      []*image.Paletted{job.Paletted[i]},
-							Width:         job.Width,
-							Height:        job.Height,
-							Position:      i,
-							Trans:         job.Trans,
-							Options:       job.Options,
-							ResultChannel: job.ResultChannel,
-						}
-					}
-
+				job.ResultChannel <- &Result{
+					Image:    img,
+					Position: job.Position,
+					Paletted: image.NewPaletted(image.Rect(0, 0, bounds.Max.X, bounds.Max.Y), job.Paletted.Palette),
 				}
+
 			case <-w.quit:
 				return
 			}
@@ -77,7 +63,7 @@ func (w Worker) Stop() {
 	}()
 }
 
-func NewGoImageEngine(defaultFormat string, format string, quality int, maxWorkers int) *GoImageEngine {
+func NewGoImageEngine(defaultFormat string, format string, quality int, maxWorkers int) Engine {
 	jobs := make(chan *PalettedJob)
 	quit := make(chan bool)
 
@@ -88,6 +74,8 @@ func NewGoImageEngine(defaultFormat string, format string, quality int, maxWorke
 		PalettedChannel: jobs,
 	}
 
+	workers := []*Worker{}
+
 	for i := 0; i < maxWorkers; i++ {
 		worker := &Worker{
 			PalettedChannel: jobs,
@@ -95,7 +83,11 @@ func NewGoImageEngine(defaultFormat string, format string, quality int, maxWorke
 			Engine:          engine,
 		}
 		go worker.Start()
+
+		workers = append(workers, worker)
 	}
+
+	engine.Workers = workers
 
 	return engine
 }
@@ -120,7 +112,7 @@ type Result struct {
 }
 
 type PalettedJob struct {
-	Paletted      []*image.Paletted
+	Paletted      *image.Paletted
 	Width         int
 	Height        int
 	Position      int
@@ -136,13 +128,21 @@ func scalingFactor(srcWidth int, srcHeight int, destWidth int, destHeight int) f
 }
 
 func scalingFactorImage(img image.Image, dstWidth int, dstHeight int) float64 {
-	width, height := ImageSize(img)
+	width, height := imageSize(img)
 
 	return scalingFactor(width, height, dstWidth, dstHeight)
 }
 
-func ImageSize(e image.Image) (int, int) {
+func imageSize(e image.Image) (int, int) {
 	return e.Bounds().Max.X, e.Bounds().Max.Y
+}
+
+func (e *GoImageEngine) Stop() error {
+	for _, worker := range e.Workers {
+		worker.Stop()
+	}
+
+	return nil
 }
 
 func (e *GoImageEngine) Scale(img image.Image, dstWidth int, dstHeight int, upscale bool, trans Transformation) image.Image {
@@ -176,19 +176,22 @@ func (e *GoImageEngine) TransformGIF(img *imagefile.ImageFile, width int, height
 
 	length := len(g.Image)
 	done := make(chan *Result)
-
-	e.PalettedChannel <- &PalettedJob{
-		Paletted:      g.Image,
-		Width:         width,
-		Height:        height,
-		Position:      -1,
-		Trans:         trans,
-		Options:       options,
-		ResultChannel: done,
-	}
-
 	images := make([]*image.Paletted, length)
 	processed := 0
+
+	go func(images []*image.Paletted) {
+		for i, image := range images {
+			e.PalettedChannel <- &PalettedJob{
+				Paletted:      image,
+				Width:         width,
+				Height:        height,
+				Position:      i,
+				Trans:         trans,
+				Options:       options,
+				ResultChannel: done,
+			}
+		}
+	}(g.Image)
 
 	for {
 		select {
@@ -211,6 +214,19 @@ func (e *GoImageEngine) TransformGIF(img *imagefile.ImageFile, width int, height
 
 	close(done)
 
+	srcW, srcH := imageSize(first)
+
+	if width == 0 {
+		tmpW := float64(height) * float64(srcW) / float64(srcH)
+		width = int(math.Max(1.0, math.Floor(tmpW+0.5)))
+	}
+	if height == 0 {
+		tmpH := float64(width) * float64(srcH) / float64(srcW)
+		height = int(math.Max(1.0, math.Floor(tmpH+0.5)))
+	}
+
+	g.Config.Width = width
+	g.Config.Height = height
 	g.Image = images
 
 	buf := &bytes.Buffer{}

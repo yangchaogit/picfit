@@ -12,6 +12,7 @@ type Options struct {
 }
 
 type Engine interface {
+	Stop() error
 	Resize(img *image.ImageFile, width int, height int, options *Options) ([]byte, error)
 	Thumbnail(img *image.ImageFile, width int, height int, options *Options) ([]byte, error)
 	Transform(img *image.ImageFile, operation *Operation, qs map[string]string) (*image.ImageFile, error)

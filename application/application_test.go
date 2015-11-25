@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -40,7 +41,7 @@ func newDummyApplication() *Application {
 	app.SourceStorage = &dummy.DummyStorage{}
 	app.DestStorage = &dummy.DummyStorage{}
 	app.KVStore = &dummy.DummyKVStore{}
-	app.Engine = &engines.GoImageEngine{}
+	app.Engine = engines.NewGoImageEngine(DefaultFormat, "", 90, runtime.NumCPU())
 
 	return app
 }
@@ -520,6 +521,7 @@ func TestStorageApplicationWithURL(t *testing.T) {
 
 func TestDummyApplicationErrors(t *testing.T) {
 	app := newDummyApplication()
+	defer app.Engine.Stop()
 
 	location := "http://example.com/display/resize/100x100/avatar.png"
 
@@ -539,6 +541,7 @@ func TestDummyApplication(t *testing.T) {
 	defer ts.CloseClientConnections()
 
 	app := newDummyApplication()
+	defer app.Engine.Stop()
 
 	for _, filename := range []string{"avatar.png", "schwarzy.jpg", "giphy.gif"} {
 		u, _ := url.Parse(ts.URL + "/" + filename)
