@@ -8,7 +8,7 @@ import (
 
 	"github.com/mholt/binding"
 	"github.com/thoas/gostorages"
-	"github.com/thoas/picfit/image"
+	"picfit/image"
 )
 
 // MultipartPayload represents a multipart upload

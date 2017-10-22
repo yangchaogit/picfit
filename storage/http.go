@@ -9,7 +9,7 @@ import (
 
 	"github.com/franela/goreq"
 	"github.com/thoas/gostorages"
-	"github.com/thoas/picfit/errs"
+	"picfit/errs"
 )
 
 // HTTPStorage wraps a storage

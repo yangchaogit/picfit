@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/thoas/picfit/constants"
-	"github.com/thoas/picfit/server"
-	"github.com/thoas/picfit/signature"
+	"picfit/constants"
+	"picfit/server"
+	"picfit/signature"
 	"github.com/urfave/cli"
 )
 

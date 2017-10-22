@@ -2,7 +2,7 @@ package engine
 
 import (
 	"github.com/disintegration/imaging"
-	"github.com/thoas/picfit/image"
+	"picfit/image"
 )
 
 type Options struct {

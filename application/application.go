@@ -10,14 +10,14 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"github.com/thoas/gokvstores"
-	"github.com/thoas/picfit/config"
-	"github.com/thoas/picfit/engine"
-	"github.com/thoas/picfit/errs"
-	"github.com/thoas/picfit/hash"
-	"github.com/thoas/picfit/image"
-	"github.com/thoas/picfit/kvstore"
-	"github.com/thoas/picfit/logger"
-	"github.com/thoas/picfit/storage"
+	"picfit/config"
+	"picfit/engine"
+	"picfit/errs"
+	"picfit/hash"
+	"picfit/image"
+	"picfit/kvstore"
+	"picfit/logger"
+	"picfit/storage"
 )
 
 // LoadFromConfigContent returns a net/context from content

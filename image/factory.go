@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	"github.com/thoas/gostorages"
-	"github.com/thoas/picfit/storage"
+	"picfit/storage"
 )
 
 // FromURL retrieves an ImageFile from an url

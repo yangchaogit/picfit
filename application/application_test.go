@@ -23,12 +23,12 @@ import (
 	"github.com/disintegration/imaging"
 	"github.com/stretchr/testify/assert"
 	"github.com/thoas/gokvstores"
-	"github.com/thoas/picfit/application"
-	"github.com/thoas/picfit/config"
-	"github.com/thoas/picfit/kvstore"
-	"github.com/thoas/picfit/server"
-	"github.com/thoas/picfit/signature"
-	"github.com/thoas/picfit/storage"
+	"picfit/application"
+	"picfit/config"
+	"picfit/kvstore"
+	"picfit/server"
+	"picfit/signature"
+	"picfit/storage"
 )
 
 type Dimension struct {

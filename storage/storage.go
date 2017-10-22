@@ -6,7 +6,7 @@ import (
 
 	"github.com/mitchellh/goamz/aws"
 	"github.com/thoas/gostorages"
-	"github.com/thoas/picfit/config"
+	"picfit/config"
 )
 
 // NewStoragesFromConfig return destination and source storages from config

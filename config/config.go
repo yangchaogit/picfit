@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	"github.com/spf13/viper"
-	"github.com/thoas/picfit/constants"
+	"picfit/constants"
 )
 
 // Shard is a struct to allow shard location when files are uploaded

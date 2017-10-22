@@ -6,11 +6,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/thoas/gokvstores"
 	"github.com/thoas/gostorages"
-	"github.com/thoas/picfit/config"
-	"github.com/thoas/picfit/engine"
-	"github.com/thoas/picfit/kvstore"
-	"github.com/thoas/picfit/logger"
-	"github.com/thoas/picfit/storage"
+	"picfit/config"
+	"picfit/engine"
+	"picfit/kvstore"
+	"picfit/logger"
+	"picfit/storage"
 )
 
 // SetContext adds application context in the gin context

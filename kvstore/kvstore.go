@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/thoas/gokvstores"
-	"github.com/thoas/picfit/config"
+	"picfit/config"
 )
 
 // NewKVStoreFromConfig returns a KVStore from config
