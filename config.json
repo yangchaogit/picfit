@@ -1,0 +1,14 @@
+{
+  "debug":true,
+  "port": 3001,
+  "logger":{
+    "level":"debug"
+  },
+  "storage": {
+    "src": {
+      "type": "http+fs",
+      "base_url": "http://s.umagicorder.com",
+      "location": "/"
+    }
+  }
+}
