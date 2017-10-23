@@ -259,7 +259,7 @@ func ImageFileFromContext(c *gin.Context, async bool, load bool) (*image.ImageFi
 		Headers: map[string]string{},
 	}
 	var err error
-	var filepath string
+	//var filepath string
 
 	prefix := cfg.KVStore.Prefix
 
@@ -287,26 +287,36 @@ func ImageFileFromContext(c *gin.Context, async bool, load bool) (*image.ImageFi
 	} else {
 		l.Infof("Key %s not found in kvstore", storeKey)
 
-		u, exists := c.Get("url")
+		//u, exists := c.Get("url")
 
 		parameters := c.MustGet("parameters").(map[string]string)
 
 		// Image not found from the KVStore, we need to process it
 		// URL available in Query String
-		if exists {
-			file, err = image.FromURL(u.(*url.URL), cfg.Options.DefaultUserAgent)
-		} else {
-			// URL provided we use http protocol to retrieve it
-			s := storage.SourceFromContext(c)
+		//if exists {
+		//	file, err = image.FromURL(u.(*url.URL), cfg.Options.DefaultUserAgent)
+		//} else {
+		//	// URL provided we use http protocol to retrieve it
+		//	s := storage.SourceFromContext(c)
+		//
+		//	filepath = parameters["path"]
+		//
+		//	fmt.Println(filepath)
+		//
+		//	if !s.Exists(filepath) {
+		//		return nil, errs.ErrFileNotExists
+		//	}
+		//
+		//	file, err = image.FromStorage(s, filepath)
+		//}
 
-			filepath = parameters["path"]
+		u, err := url.Parse(fmt.Sprintf("%s/%s", cfg.Storage.Src.BaseURL, parameters["path"]))
 
-			if !s.Exists(filepath) {
-				return nil, errs.ErrFileNotExists
-			}
-
-			file, err = image.FromStorage(s, filepath)
+		if err != nil {
+			return nil, err
 		}
+
+		file, err = image.FromURL(u, cfg.Options.DefaultUserAgent)
 
 		if err != nil {
 			return nil, err
@@ -330,13 +340,13 @@ func ImageFileFromContext(c *gin.Context, async bool, load bool) (*image.ImageFi
 
 	file.Headers["ETag"] = key
 
-	if stored == "" {
-		if async == true {
-			go Store(c, filepath, file)
-		} else {
-			err = Store(c, filepath, file)
-		}
-	}
+	//if stored == "" {
+	//	if async == true {
+	//		go Store(c, filepath, file)
+	//	} else {
+	//		err = Store(c, filepath, file)
+	//	}
+	//}
 
 	return file, err
 }
